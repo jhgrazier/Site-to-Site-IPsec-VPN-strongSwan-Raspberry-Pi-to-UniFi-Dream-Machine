@@ -27,12 +27,16 @@ Public IP / FQDN:
 
 Install strongSwan on the Pi:
 
+```
 sudo apt update
 sudo apt install -y strongswan strongswan-pki
+```
 
 Enable at boot:
 
+```
 sudo systemctl enable strongswan-starter
+```
 
 ---
 
@@ -40,9 +44,11 @@ sudo systemctl enable strongswan-starter
 
 Enable IPv4 forwarding:
 
+```
 sudo sysctl -w net.ipv4.ip_forward=1
 echo "net.ipv4.ip_forward=1" | sudo tee /etc/sysctl.d/99-ipsec-forwarding.conf
 sudo sysctl --system
+```
 
 ---
 
@@ -50,6 +56,7 @@ sudo sysctl --system
 
 ### /etc/ipsec.conf
 
+```
 config setup
     charondebug="ike 1, knl 1, cfg 1"
 
@@ -75,6 +82,7 @@ conn udm-site
     reauth=no
 
     auto=start
+```
 
 Important:
 - Use straight ASCII double quotes only.
@@ -131,11 +139,15 @@ Keep NAT-T enabled unless both sides have public IPs.
 
 Restart strongSwan:
 
+```
 sudo systemctl restart strongswan-starter
+```
 
 Check status:
 
+```
 ipsec statusall
+```
 
 You should see:
 - IKE_SA: ESTABLISHED
@@ -148,12 +160,14 @@ You should see:
 
 DPD configuration:
 
+```
 dpddelay=10s
 dpdtimeout=40s
 dpdaction=restart
 closeaction=restart
 keyingtries=%forever
 reauth=no
+```
 
 ---
 
@@ -161,7 +175,7 @@ reauth=no
 
 Create watchdog script:
 
-
+```
 sudo tee /usr/local/sbin/ipsec-watchdog.sh >/dev/null <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -175,13 +189,17 @@ if ! grep -qE "^ *${CONN}\[[0-9]+\]: ESTABLISHED" <<<"$S" || \
   systemctl restart strongswan-starter
 fi
 EOF
+```
 
 Make executable:
 
+```
 sudo chmod +x /usr/local/sbin/ipsec-watchdog.sh
+```
 
 Create service:
 
+```
 sudo tee /etc/systemd/system/ipsec-watchdog.service >/dev/null <<'EOF'
 [Unit]
 Description=Watchdog for strongSwan site-to-site tunnel
@@ -192,9 +210,11 @@ Wants=network-online.target
 Type=oneshot
 ExecStart=/usr/local/sbin/ipsec-watchdog.sh
 EOF
+```
 
 Create timer:
 
+```
 sudo tee /etc/systemd/system/ipsec-watchdog.timer >/dev/null <<'EOF'
 [Unit]
 Description=Run strongSwan tunnel watchdog every minute
@@ -207,16 +227,21 @@ AccuracySec=5
 [Install]
 WantedBy=timers.target
 EOF
+```
 
 Enable:
 
+```
 sudo systemctl daemon-reload
 sudo systemctl enable --now ipsec-watchdog.timer
+```
 
 Verify:
 
+```
 systemctl list-timers | grep ipsec-watchdog
 journalctl -t ipsec-watchdog -n 50
+```
 
 ---
 
@@ -228,8 +253,10 @@ Do not SNAT VPN traffic.
 
 Ensure forwarding policy allows traffic:
 
+```
 sudo iptables -F
 sudo iptables -P FORWARD ACCEPT
+```
 
 ---
 
@@ -237,11 +264,15 @@ sudo iptables -P FORWARD ACCEPT
 
 From Pi:
 
+```
 ping 192.168.32.10
+```
 
 From UDM LAN:
 
+```
 traceroute 192.168.40.88
+```
 
 Expected:
 - Hop through Pi
@@ -253,7 +284,9 @@ Expected:
 
 Live logs:
 
+```
 journalctl -u strongswan-starter -f
+```
 
 Common issues:
 
