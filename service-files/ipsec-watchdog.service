@@ -1,0 +1,8 @@
+[Unit]
+Description=Watchdog for strongSwan site-to-site tunnel
+After=network-online.target strongswan-starter.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/ipsec-watchdog.sh
